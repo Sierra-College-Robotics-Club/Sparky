@@ -105,13 +105,7 @@ void setup() {
 }
 
 void loop() {
-  /*
-  Serial.print(mName);
-  Serial.print("  readMode: ");
-  Serial.print(readMode(mDin, samples));
-  Serial.print(", readMedian: ");
-  Serial.println(readMedian(mAin, samples));
-  */
+  
   display(mDin, mAin, mName);
   //display(oAin, oDin, oName);
   //display(kAin, kDin, kName);
