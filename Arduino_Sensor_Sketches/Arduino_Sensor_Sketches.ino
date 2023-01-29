@@ -63,14 +63,14 @@ int readMedian(int pin, int samples){
 //    pin is the pin which the digital data being read form
 //    samples is the number of samples to take per measurement
 int readMode(int pin, int samples){
-  int countF;
-  int countT;
+  int countF = 0;
+  int countT = 0;
   for(int i = 0; i < samples; i++){
     if(digitalRead(pin) == 0){
-      countF +=1;
+      countT += 1;
     }
     else{
-      countT += 1;  
+      countF += 1;  
     } 
   }
   if(countF > countT){
@@ -91,7 +91,7 @@ void display(int dPin, int aPin, String sName){
   else{
     Serial.print(sName);
     Serial.print("  readMode: ");
-    Serial.print(readMode(aPin, samples));
+    Serial.print(readMode(dPin, samples));
     Serial.print(", readMedian: ");
     Serial.println(readMedian(aPin, samples));
   }
@@ -100,12 +100,21 @@ void display(int dPin, int aPin, String sName){
 
 void setup() {
   Serial.begin(9600);
+  pinMode(mAin, INPUT);
+  pinMode(mDin, INPUT);
 }
 
 void loop() {
-  display(mAin, mDin, mName);
+  /*
+  Serial.print(mName);
+  Serial.print("  readMode: ");
+  Serial.print(readMode(mDin, samples));
+  Serial.print(", readMedian: ");
+  Serial.println(readMedian(mAin, samples));
+  */
+  display(mDin, mAin, mName);
   //display(oAin, oDin, oName);
   //display(kAin, kDin, kName);
   //display(0, xDin, xName);
-
+  delay(1000);
 }
