@@ -1,5 +1,6 @@
 // This is code for testing the X001T, KY 026 and old firebot flame sensors and the MH edge detector
 
+// this is a nonsense change for testing purposes
 
 // X001T
 const int xDin = 7;
