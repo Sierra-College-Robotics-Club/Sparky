@@ -58,78 +58,100 @@ void encoder_left_isr()
 // Interrupt service routine for the right encoder
 void encoder_right_isr()
 {
+//  encoder_right_count += 1.0 / ticks_per_rotation;
+  encoder_right_count++;
   if (encoder_right_count >= ticks_per_rotation) {
     encoder_right_count -= ticks_per_rotation;
     total_rotations_right += 1;
   }
-  
-  if (digitalRead(ENCODER_RIGHT_A) == digitalRead(ENCODER_RIGHT_B)) {
-    encoder_right_count++;
-  } else {
-    encoder_right_count--;
-  }
+//  
+//  if (digitalRead(ENCODER_RIGHT_A) == digitalRead(ENCODER_RIGHT_B)) {
+//    encoder_right_count++;
+//  } else {
+//    encoder_right_count--;
+//  }
 }
 
 void setup()
 {
   // Set up encoder pins as inputs
-  pinMode(ENCODER_LEFT_A, INPUT);
-  pinMode(ENCODER_LEFT_B, INPUT);
-  pinMode(ENCODER_RIGHT_A, INPUT);
-  pinMode(ENCODER_RIGHT_B, INPUT);
+  pinMode(ENCODER_LEFT_A, INPUT_PULLUP);
+  pinMode(ENCODER_LEFT_B, INPUT_PULLUP);
+  pinMode(ENCODER_RIGHT_A, INPUT_PULLUP);
+  pinMode(ENCODER_RIGHT_B, INPUT_PULLUP);
 
   // Enable pullup resistors on encoder pins
-  digitalWrite(ENCODER_LEFT_A, HIGH);
-  digitalWrite(ENCODER_LEFT_B, HIGH);
-  digitalWrite(ENCODER_RIGHT_A, HIGH);
-  digitalWrite(ENCODER_RIGHT_B, HIGH);
+//  digitalWrite(ENCODER_LEFT_A, HIGH);
+//  digitalWrite(ENCODER_LEFT_B, HIGH);
+//  digitalWrite(ENCODER_RIGHT_A, HIGH);
+//  digitalWrite(ENCODER_RIGHT_B, HIGH);
 
   // Attach interrupt service routines to encoder pins
-  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_A), encoder_left_isr, CHANGE);
+//  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_A), encoder_left_isr, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENCODER_RIGHT_A), encoder_right_isr, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_B), encoder_left_isr, CHANGE);
+//  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_B), encoder_left_isr, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENCODER_RIGHT_B), encoder_right_isr, CHANGE);
 
 
   // Set up PWM pins as outputs
   pinMode(PWM_LEFT, OUTPUT);
   pinMode(PWM_RIGHT, OUTPUT);
+  analogWrite(PWM_RIGHT, 80);
+
+  Serial.begin(9600);
 }
 
+float lastspin = 0.0;
+float curspin = 0.0;
+float current_rotation = 0.0;
+float rps = 0.0;
+int dly = 1000;
 void loop()
 { 
   // Calculate left and right velocities based on encoder counts
-
-  //! Needs to be changed to counts/sec
-  process_var_left = (encoder_left_count - encoder_left_prev) / 2.0; // Divide by 2 for quadrature encoding
-  process_var_right = (encoder_right_count - encoder_right_prev) / 2.0;
-  encoder_left_prev = encoder_left_count;
-  encoder_right_prev = encoder_right_count;
-
-  // Calculate left and right PID errors
-  left_proportion = (left_set_point - process_var_left) * KP;
-  right_proportion = (right_set_point - process_var_right) * KP;
-
-  // Calculate left and right PID terms
-  left_integral += left_proportion * KI;
-  right_integral += right_proportion * KI;
+  current_rotation = (encoder_right_count / ticks_per_rotation) / 2;
+//  //! Needs to be changed to counts/sec
+//  process_var_left = (encoder_left_count - encoder_left_prev); // Divide by 2 for quadrature encoding
+//  process_var_right = (encoder_right_count - encoder_right_prev);
+  Serial.println("data:");
+//  Serial.println(process_var_left);
+  Serial.println(total_rotations_right);
+//  Serial.println(encoder_right_count);
+  Serial.println(current_rotation);
+  curspin = total_rotations_right + current_rotation;
+  rps = (curspin - lastspin);
+  lastspin = curspin;
+  Serial.println(rps * 60);
+  Serial.println(rps);
+  delay(dly);
   
-  left_derivative = (left_proportion - left_prev_error) * KD;
-  right_derivative = (right_proportion - right_prev_error) * KD;
-  
-  left_prev_error = left_proportion;
-  right_prev_error = right_proportion;
-  left_error = left_proportion + left_integral + left_derivative;
-  right_error = right_proportion + right_integral + right_derivative;
-  if (left_error > 255) { left_error = 255; }
-  if (right_error > 255) { right_error = 255; }
+//  encoder_left_prev = encoder_left_count;
+//  encoder_right_prev = encoder_right_count;
+//
+//  // Calculate left and right PID errors
+//  left_proportion = (left_set_point - process_var_left) * KP;
+//  right_proportion = (right_set_point - process_var_right) * KP;
+//
+//  // Calculate left and right PID terms
+//  left_integral += left_proportion * KI;
+//  right_integral += right_proportion * KI;
+//  
+//  left_derivative = (left_proportion - left_prev_error) * KD;
+//  right_derivative = (right_proportion - right_prev_error) * KD;
+//  
+//  left_prev_error = left_proportion;
+//  right_prev_error = right_proportion;
+//  left_error = left_proportion + left_integral + left_derivative;
+//  right_error = right_proportion + right_integral + right_derivative;
+//  if (left_error > 255) { left_error = 255; }
+//  if (right_error > 255) { right_error = 255; }
 
-  Serial.println(left_error);
-  Serial.println(right_error);
-  
+//  Serial.println(left_error);
+//  Serial.println(right_error);
+//  
   // Set PWM values based on PID outputs
-  analogWrite(PWM_LEFT, (int)left_error);
-  analogWrite(PWM_RIGHT, (int)right_error);
+//  analogWrite(PWM_LEFT, (int)left_error);
+//  analogWrite(PWM_RIGHT, (int)right_error);
 }
 
 // I'm going to bed...
