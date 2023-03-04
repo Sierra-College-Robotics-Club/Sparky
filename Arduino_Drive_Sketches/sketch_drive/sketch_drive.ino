@@ -1,8 +1,8 @@
 // Define constants for the encoder pins and PWM pins
 const int ENCODER_RIGHT_A = 2;
 const int ENCODER_RIGHT_B = 3;
-const int ENCODER_LEFT_A = 4;
-const int ENCODER_LEFT_B = 5;
+const int ENCODER_LEFT_A = 6;
+const int ENCODER_LEFT_B = 7;
 const int PWM_LEFT = 10;
 const int PWM_RIGHT = 11;
 
@@ -10,7 +10,8 @@ const int PWM_RIGHT = 11;
 volatile long encoder_left_count = 0;
 volatile long encoder_right_count = 0;
 // Overall current rotation 0.0-1.0
-float current_rotation = 0.0;
+float current_rotation_right = 0.0;
+float current_rotation_left = 0.0;
 
 // Define constants for PID loop tuning
 const float KP = 1.0;
@@ -41,17 +42,41 @@ float left_prev_error = 0.0;
 float right_prev_error = 0.0;
 
 // Interrupt service routine for the left encoder
-void encoder_left_isr()
+void encoder_left_isr_a()
 {
+  // when a is rising and b is low we are going forwards
+  if (digitalRead(ENCODER_LEFT_B) == LOW) {
+    encoder_left_count += 1;
+  } else {
+    encoder_left_count -= 1;
+  }
+  
   if (encoder_left_count >= ticks_per_rotation) {
     encoder_left_count -= ticks_per_rotation;
     total_rotations_left += 1;
   }
- 
-  if (digitalRead(ENCODER_LEFT_A) == digitalRead(ENCODER_LEFT_B)) {
-    encoder_left_count++;
+  if (encoder_left_count <= -1) {
+    encoder_left_count = ticks_per_rotation - 1;
+    total_rotations_left -= 1;
+  }
+}
+
+void encoder_left_isr_b()
+{
+  // when b is rising and a is high we are going forwards
+  if (digitalRead(ENCODER_LEFT_A) == HIGH) {
+    encoder_left_count += 1;
   } else {
-    encoder_left_count--;
+    encoder_left_count -= 1;
+  }
+  
+  if (encoder_left_count >= ticks_per_rotation) {
+    encoder_left_count -= ticks_per_rotation;
+    total_rotations_left += 1;
+  }
+  if (encoder_left_count <= -1) {
+    encoder_left_count = ticks_per_rotation;
+    total_rotations_left -= 1;
   }
 }
 
@@ -102,35 +127,35 @@ void setup()
   pinMode(ENCODER_RIGHT_A, INPUT_PULLUP);
   pinMode(ENCODER_RIGHT_B, INPUT_PULLUP);
 
-  // Enable pullup resistors on encoder pins
-//  digitalWrite(ENCODER_LEFT_A, HIGH);
-//  digitalWrite(ENCODER_LEFT_B, HIGH);
-//  digitalWrite(ENCODER_RIGHT_A, HIGH);
-//  digitalWrite(ENCODER_RIGHT_B, HIGH);
-
   // Attach interrupt service routines to encoder pins
-//  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_A), encoder_left_isr, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_A), encoder_left_isr_a, RISING);
   attachInterrupt(digitalPinToInterrupt(ENCODER_RIGHT_A), encoder_right_isr_a, RISING);
-//  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_B), encoder_left_isr, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_B), encoder_left_isr_b, RISING);
   attachInterrupt(digitalPinToInterrupt(ENCODER_RIGHT_B), encoder_right_isr_b, RISING);
 
 
   // Set up PWM pins as outputs
   pinMode(PWM_LEFT, OUTPUT);
   pinMode(PWM_RIGHT, OUTPUT);
+  analogWrite(PWM_LEFT, 255);
   analogWrite(PWM_RIGHT, 255);
 
   Serial.begin(9600);
+  Serial.println("output started");
 }
 
 void loop()
 { 
   // Calculate left and right velocities based on encoder counts
-  current_rotation = (encoder_right_count / ticks_per_rotation);
+  current_rotation_right = (encoder_right_count / ticks_per_rotation);
+  current_rotation_left = (encoder_left_count / ticks_per_rotation);
   
-  Serial.println("data:");
+  Serial.println("data right:");
   Serial.println(String(total_rotations_right) + " total rotations");
-  Serial.println(String(current_rotation) + " Current rotation");
+  Serial.println(String(current_rotation_right) + " Current rotation");
+  Serial.println("data left:");
+  Serial.println(String(total_rotations_left) + " total rotations");
+  Serial.println(String(current_rotation_left) + " Current rotation");
   delay(1000);
 
 //  encoder_left_prev = encoder_left_count;
