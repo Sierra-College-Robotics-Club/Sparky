@@ -9,8 +9,8 @@ const int PWM_RIGHT = 11;
 // Define variables to hold encoder counts and previous counts
 volatile long encoder_left_count = 0;
 volatile long encoder_right_count = 0;
-volatile long encoder_left_prev = 0;
-volatile long encoder_right_prev = 0;
+// Overall current rotation 0.0-1.0
+float current_rotation = 0.0;
 
 // Define constants for PID loop tuning
 const float KP = 1.0;
@@ -20,7 +20,7 @@ const float KD = 0.0;
 // Define variables for PID loop
 float total_rotations_left = 0;
 float total_rotations_right = 0;
-const float ticks_per_rotation = 48 * 75; // 48 TICKS per rotation of the motor and 75 rotations of the motor per rotation of the wheel as the gearbox is 75:1
+const float ticks_per_rotation = 48 * 74.83; // 48 TICKS per rotation of the motor and 75 rotations of the motor per rotation of the wheel as the gearbox is 75:1
 
 // Desired wheel velocity (1800 ticks per second, 2 sec per rotation)
 const float left_set_point = 1.0;
@@ -56,20 +56,42 @@ void encoder_left_isr()
 }
 
 // Interrupt service routine for the right encoder
-void encoder_right_isr()
+void encoder_right_isr_a()
 {
-//  encoder_right_count += 1.0 / ticks_per_rotation;
-  encoder_right_count++;
+  // when a is rising and b is low we are going forwards
+  if (digitalRead(ENCODER_RIGHT_B) == LOW) {
+    encoder_right_count += 1;
+  } else {
+    encoder_right_count -= 1;
+  }
+  
   if (encoder_right_count >= ticks_per_rotation) {
     encoder_right_count -= ticks_per_rotation;
     total_rotations_right += 1;
   }
-//  
-//  if (digitalRead(ENCODER_RIGHT_A) == digitalRead(ENCODER_RIGHT_B)) {
-//    encoder_right_count++;
-//  } else {
-//    encoder_right_count--;
-//  }
+  if (encoder_right_count <= -1) {
+    encoder_right_count = ticks_per_rotation - 1;
+    total_rotations_right -= 1;
+  }
+}
+
+void encoder_right_isr_b()
+{
+  // when b is rising and a is high we are going forwards
+  if (digitalRead(ENCODER_RIGHT_A) == HIGH) {
+    encoder_right_count += 1;
+  } else {
+    encoder_right_count -= 1;
+  }
+  
+  if (encoder_right_count >= ticks_per_rotation) {
+    encoder_right_count -= ticks_per_rotation;
+    total_rotations_right += 1;
+  }
+  if (encoder_right_count <= -1) {
+    encoder_right_count = ticks_per_rotation;
+    total_rotations_right -= 1;
+  }
 }
 
 void setup()
@@ -87,44 +109,30 @@ void setup()
 //  digitalWrite(ENCODER_RIGHT_B, HIGH);
 
   // Attach interrupt service routines to encoder pins
-//  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_A), encoder_left_isr, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(ENCODER_RIGHT_A), encoder_right_isr, CHANGE);
-//  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_B), encoder_left_isr, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(ENCODER_RIGHT_B), encoder_right_isr, CHANGE);
+//  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_A), encoder_left_isr, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_RIGHT_A), encoder_right_isr_a, RISING);
+//  attachInterrupt(digitalPinToInterrupt(ENCODER_LEFT_B), encoder_left_isr, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_RIGHT_B), encoder_right_isr_b, RISING);
 
 
   // Set up PWM pins as outputs
   pinMode(PWM_LEFT, OUTPUT);
   pinMode(PWM_RIGHT, OUTPUT);
-  analogWrite(PWM_RIGHT, 80);
+  analogWrite(PWM_RIGHT, 255);
 
   Serial.begin(9600);
 }
 
-float lastspin = 0.0;
-float curspin = 0.0;
-float current_rotation = 0.0;
-float rps = 0.0;
-int dly = 1000;
 void loop()
 { 
   // Calculate left and right velocities based on encoder counts
-  current_rotation = (encoder_right_count / ticks_per_rotation) / 2;
-//  //! Needs to be changed to counts/sec
-//  process_var_left = (encoder_left_count - encoder_left_prev); // Divide by 2 for quadrature encoding
-//  process_var_right = (encoder_right_count - encoder_right_prev);
-  Serial.println("data:");
-//  Serial.println(process_var_left);
-  Serial.println(total_rotations_right);
-//  Serial.println(encoder_right_count);
-  Serial.println(current_rotation);
-  curspin = total_rotations_right + current_rotation;
-  rps = (curspin - lastspin);
-  lastspin = curspin;
-  Serial.println(rps * 60);
-  Serial.println(rps);
-  delay(dly);
+  current_rotation = (encoder_right_count / ticks_per_rotation);
   
+  Serial.println("data:");
+  Serial.println(String(total_rotations_right) + " total rotations");
+  Serial.println(String(current_rotation) + " Current rotation");
+  delay(1000);
+
 //  encoder_left_prev = encoder_left_count;
 //  encoder_right_prev = encoder_right_count;
 //
