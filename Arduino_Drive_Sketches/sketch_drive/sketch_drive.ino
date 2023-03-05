@@ -1,10 +1,10 @@
 // Define constants for the encoder pins and PWM pins
-const int ENCODER_RIGHT_A = 2;
-const int ENCODER_RIGHT_B = 3;
+const int ENCODER_RIGHT_A = 4;
+const int ENCODER_RIGHT_B = 5;
 const int ENCODER_LEFT_A = 6;
 const int ENCODER_LEFT_B = 7;
-const int PWM_LEFT = 10;
-const int PWM_RIGHT = 11;
+const int PWM_LEFT = 3;
+const int PWM_RIGHT = 2;
 
 // Define variables to hold encoder counts and previous counts
 volatile long encoder_left_count = 0;
@@ -139,7 +139,7 @@ void setup()
   // Set up PWM pins as outputs
   pinMode(PWM_LEFT, OUTPUT);
   pinMode(PWM_RIGHT, OUTPUT);
-  analogWrite(PWM_LEFT, 90);
+//  analogWrite(PWM_LEFT, 90);2
   analogWrite(PWM_RIGHT, 90);
 
   Serial.begin(9600);
@@ -169,6 +169,7 @@ void loop()
   left_rps = (overall_rotation_left - last_overall_rotation_left) / (seconds_past);
   last_overall_rotation_left = overall_rotation_left;
   
+  Serial.println(right_rps);
   Serial.println(right_rps * 60);
 
   //serial.println("data right:");
