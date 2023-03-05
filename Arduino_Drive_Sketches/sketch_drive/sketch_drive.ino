@@ -12,6 +12,8 @@ volatile long encoder_right_count = 0;
 // Overall current rotation 0.0-1.0
 float current_rotation_right = 0.0;
 float current_rotation_left = 0.0;
+volatile float overall_rotation_right = 0.0;
+volatile float overall_rotation_left = 0.0;
 
 // Define constants for PID loop tuning
 const float KP = 1.0;
@@ -137,26 +139,48 @@ void setup()
   // Set up PWM pins as outputs
   pinMode(PWM_LEFT, OUTPUT);
   pinMode(PWM_RIGHT, OUTPUT);
-  analogWrite(PWM_LEFT, 255);
-  analogWrite(PWM_RIGHT, 255);
+  analogWrite(PWM_LEFT, 90);
+  analogWrite(PWM_RIGHT, 90);
 
   Serial.begin(9600);
   Serial.println("output started");
 }
 
+volatile float last_overall_rotation_right;
+volatile float last_overall_rotation_left;
+volatile float last_millis = millis();
+volatile float seconds_past = 0.0;
+volatile float right_rps = 0.0;
+volatile float left_rps = 0.0;
 void loop()
 { 
   // Calculate left and right velocities based on encoder counts
   current_rotation_right = (encoder_right_count / ticks_per_rotation);
   current_rotation_left = (encoder_left_count / ticks_per_rotation);
+  overall_rotation_right = total_rotations_right + current_rotation_right;
+  overall_rotation_left = total_rotations_left + current_rotation_left;
+
+  seconds_past = (millis() - last_millis) / 1000;
+  last_millis = millis();
+
+  right_rps = (overall_rotation_right - last_overall_rotation_right) / (seconds_past);
+  last_overall_rotation_right = overall_rotation_right; 
   
-  Serial.println("data right:");
-  Serial.println(String(total_rotations_right) + " total rotations");
-  Serial.println(String(current_rotation_right) + " Current rotation");
-  Serial.println("data left:");
-  Serial.println(String(total_rotations_left) + " total rotations");
-  Serial.println(String(current_rotation_left) + " Current rotation");
-  delay(1000);
+  left_rps = (overall_rotation_left - last_overall_rotation_left) / (seconds_past);
+  last_overall_rotation_left = overall_rotation_left;
+  
+  Serial.println(right_rps * 60);
+
+  //serial.println("data right:");
+  //serial.println(string(total_rotations_right) + " total rotations");
+  //serial.println(string(current_rotation_right) + " current rotation");
+  //serial.println("data left:");
+  //serial.println(string(total_rotations_left) + " total rotations");
+  //serial.println(string(current_rotation_left) + " current rotation");
+  
+  delay(75); // 75 ms is a good comprimise for calculating a reasonable rpm
+
+  
 
 //  encoder_left_prev = encoder_left_count;
 //  encoder_right_prev = encoder_right_count;
