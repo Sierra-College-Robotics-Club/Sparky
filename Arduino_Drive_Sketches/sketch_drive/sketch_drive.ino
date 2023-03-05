@@ -44,7 +44,7 @@ float left_prev_error = 0.0;
 float right_prev_error = 0.0;
 
 // Interrupt service routine for the left encoder
-void encoder_left_isr_a()
+void encoder_left_isr_b()
 {
   // when a is rising and b is low we are going forwards
   if (digitalRead(ENCODER_LEFT_B) == LOW) {
@@ -63,7 +63,7 @@ void encoder_left_isr_a()
   }
 }
 
-void encoder_left_isr_b()
+void encoder_left_isr_a()
 {
   // when b is rising and a is high we are going forwards
   if (digitalRead(ENCODER_LEFT_A) == HIGH) {
@@ -83,7 +83,7 @@ void encoder_left_isr_b()
 }
 
 // Interrupt service routine for the right encoder
-void encoder_right_isr_a()
+void encoder_right_isr_b()
 {
   // when a is rising and b is low we are going forwards
   if (digitalRead(ENCODER_RIGHT_B) == LOW) {
@@ -102,7 +102,7 @@ void encoder_right_isr_a()
   }
 }
 
-void encoder_right_isr_b()
+void encoder_right_isr_a()
 {
   // when b is rising and a is high we are going forwards
   if (digitalRead(ENCODER_RIGHT_A) == HIGH) {
