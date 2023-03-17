@@ -15,8 +15,13 @@
 // currently left motor
 #define rightMotor1 4
 #define rightMotor2 5
+// IR sensor pins
+#define leftIR 9
+#define rightIR 10
 
-int maxPossSpeed = 255;
+// Possible limitation for the motor driver and PWM signal setup
+// 254 seems to usually work, 253 has never failed
+int maxPossSpeed = 254;
 int minPossSpeed = 0;
 
 void rightMotorSpeed(bool dir, int speed){
@@ -51,15 +56,43 @@ void leftMotorSpeed( bool dir, int speed){
     }
 }
 
+void rotateRobot(bool dir, int speed){
+  if(speed > maxPossSpeed) speed = maxPossSpeed;
+  if(speed < minPossSpeed) speed = minPossSpeed;
+
+  // we might want to do something tricky with the speeds being passed to each motor
+
+  //if true, roatate clockwise
+  if(dir == true){
+    leftMotorSpeed(true, speed);
+    rightMotorSpeed(false, speed);
+  }
+
+  //else, rotate counterclockwise
+  if(dir == false){
+    leftMotorSpeed(false, speed);
+    rightMotorSpeed(true, speed);
+  }
+}
+
+void RISR(){
+
+}
+
+void LISR(){
+  
+}
+
 void setup() {
  // hi
  // 254 seems to inconsistently work
  // 253 works
-  leftMotorSpeed(true, 255);
+  //leftMotorSpeed(true, 254);
   // guess forwards
-  rightMotorSpeed(true, 255);
+  //rightMotorSpeed(true, 254);
 
-
+  attachInterrupt(digitalPinToInterrupt(leftIR), RISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(rightIR), LISR, RISING);
 }
 
 void loop() {
@@ -69,7 +102,27 @@ void loop() {
   //leftMotorSpeed(true, 255);
   // guess forwards
  // rightMotorSpeed(true, 255);
+  rotateRobot(true, 255);
   delay(1000);
+  rotateRobot(false, 255);
+  delay(1000);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   /*
