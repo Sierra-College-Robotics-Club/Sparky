@@ -9,12 +9,18 @@
 // atremis
 // B on motor driver
 // currently right motor
-#define leftMotor1 2
-#define leftMotor2 3
+// Motor A is left Motor B is right
+// A2 is pin 2
+// A1 is pin 3
+// L1 : 2, L2 : 3, R1 : 4, R2 : 5 | old
+#define leftMotor1 4
+#define leftMotor2 5
 // A on motor driver
 // currently left motor
-#define rightMotor1 4
-#define rightMotor2 5
+// B2 is 5
+// B1 is 4
+#define rightMotor1 3
+#define rightMotor2 2
 // IR sensor pins
 #define leftIR 9
 #define rightIR 10
@@ -24,8 +30,8 @@
 // Possible limitation for the motor driver and PWM signal setup
 // analog writing 254 seems to usually work, 253 has never failed
 // now in rpm, ultimately these will be experimental
-const int maxPossSpeed = 60;
-const int minPossSpeed = 40;
+const int maxPossSpeed = 253;
+const int minPossSpeed = 150;
 
 const int encoderDelay = 1000; // delay for the encoder count readings for PID in ms
 const int EISRDelay = 2; // delay for debouncing encoder ISRs
@@ -57,19 +63,23 @@ long lastTimeLEISR = 0;
 
 
 long rPIDInt = millis();
-short sp;
-short err;
-short cv;
-short pv; // calculated from encoder velcory
+// short sp;
+// short err;
+// short cv;
+// short pv; // calculated from encoder velcory
 
 short kp = 1;
 short ki = 0.05;
 short kd = 0.01;
 
-short intP;
-short errP;
+short lIntP;
+short lErrP;
 
-short prevPIDTime = millis();
+short rIntP;
+short rErrP;
+
+short rPrevPIDTime = millis();
+short lPrevPIDTime = millis();
 
 long rEncoderCount = 0;
 long lEncoderCount = 0;
@@ -85,20 +95,20 @@ void rightMotorSpeed(bool dir, int speed){
   delay(encoderDelay); // wait 100 ms for sample
   long sEncoderCount = rEncoderCount;
 
-  sp = speed; 
+  short sp = speed; 
 
   // pv is the rotations per units time, currently encoderDelay in ms
-  pv = ((sEncoderCount-fEncoderCount)/(74.83*12))/encoderDelay; // 74.83 rotations of motor shaft per wheel rotation (gear box) * 12 encoder rising edges per motor shaft (encoder ticks)
-  err = sp - pv;
+  short pv = ((sEncoderCount-fEncoderCount)/(74.83*12))/encoderDelay; // 74.83 rotations of motor shaft per wheel rotation (gear box) * 12 encoder rising edges per motor shaft (encoder ticks)
+  short err = sp - pv;
 
-  short cycleTime = millis() -  prevPIDTime;
-  short I = intP + ki * err * cycleTime;
+  short cycleTime = millis() -  rPrevPIDTime;
+  short I = rIntP + ki * err * cycleTime;
 
-  cv = kp * err + I + kd * (err - errP) / cycleTime;
+  short cv = kp * err + I + kd * (err - rErrP) / cycleTime;
 
-  prevPIDTime = millis();
-  errP = err;
-  intP = I;
+  rPrevPIDTime = millis();
+  rErrP = err;
+  rIntP = I;
 
   // validating speed as min and max possible value as rpm
   if(cv > maxPossSpeed) cv = maxPossSpeed;
@@ -126,18 +136,50 @@ void rightMotorSpeed(bool dir, int speed){
 }
 
 void leftMotorSpeed( bool dir, int speed){
-  if(speed > maxPossSpeed) speed = maxPossSpeed;
-  if(speed < minPossSpeed) speed = minPossSpeed;
+  // validating speed as min and max set value in rpm
+  if(speed > maxSetSpeed) speed = maxSetSpeed;
+  if(speed < minSetSpeed) speed = minSetSpeed;
+
+  long fEncoderCount = lEncoderCount;
+  delay(encoderDelay); // wait 100 ms for sample
+  long sEncoderCount = lEncoderCount;
+
+  short sp = speed; 
+
+  // pv is the rotations per units time, currently encoderDelay in ms
+  short pv = ((sEncoderCount-fEncoderCount)/(74.83*12))/encoderDelay; // 74.83 rotations of motor shaft per wheel rotation (gear box) * 12 encoder rising edges per motor shaft (encoder ticks)
+  short err = sp - pv;
+
+  short cycleTime = millis() -  lPrevPIDTime;
+  short I = lIntP + ki * err * cycleTime;
+
+  short cv = kp * err + I + kd * (err - lErrP) / cycleTime;
+
+  lPrevPIDTime = millis();
+  lErrP = err;
+  lIntP = I;
+
+  // validating speed as min and max possible value as rpm
+  if(cv > maxPossSpeed) cv = maxPossSpeed;
+  if(cv < minPossSpeed) cv = minPossSpeed;
+
+  // mapping the valid range cv (rpm) to valid range analogMin, analogMax
+  // assuming analogMax will give maxPossSpeed linearly
+  // analogSpeed takes cv(rpm) and multiplies it by the ratio of the range of analog signals to the range of rpm
+  int analogSpeed = floor(cv*((maxAnalog-minAnalog)/(maxPossSpeed-minPossSpeed)));
+
+  if(analogSpeed > maxAnalog) analogSpeed = maxAnalog;
+  if(analogSpeed < minAnalog) analogSpeed = minAnalog;
 
   //if true, go forwards
   if(dir == true){
-    analogWrite(leftMotor1, speed);
+    analogWrite(leftMotor1, analogSpeed);
     analogWrite(leftMotor2, 0);  
   }
   //else, go backwards
   else{
     analogWrite(leftMotor1, 0);
-    analogWrite(leftMotor2, speed);
+    analogWrite(leftMotor2, analogSpeed);
     }
 }
 
@@ -245,12 +287,26 @@ void loop() {
   //leftMotorSpeed(true, 255);
   // guess forwards
  // rightMotorSpeed(true, 255);
+  
+  rightMotorSpeed(true, 250);
+  leftMotorSpeed(true, 250);
+  delay(1000);
   rotateRobot(true, 255);
+  delay(1000);
+  leftMotorSpeed(true, 250);
+  rightMotorSpeed(true, 250);
   delay(1000);
   rotateRobot(false, 255);
   delay(1000);
+  leftMotorSpeed(false, 250);
+  leftMotorSpeed(false, 250);
+  delay(1000);
 
 
+    // analogWrite(leftMotor1, 0);
+    // analogWrite(leftMotor2, 250);
+    // analogWrite(rightMotor1, 0);
+    // analogWrite(rightMotor2, 250);
 
 
 
