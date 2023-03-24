@@ -250,16 +250,15 @@ void LEISR(){
 int fireExtinguish(bool leftIRState, bool rightIRState, int speed){
   int rotate_start_time = millis();
 
-
-  if(rightIRState == true){
-    while(leftIRState == true){
-      rotateRobot(true, speed);
-      //rotate_finish_time = millis();
+  if( ((rightIRState == true) && (leftIRState == false)) || ((rightIRState == false) && (leftIRState == true))) {
+    if(rightIRState == true){
+      rotateRobot(true, 250);
     }
-
-  }
-  else if(leftIRState == true){
-
+    else if(leftIRState == true){
+      rotateRobot(false, 250);
+    }
+  } else {
+    // go forward robot
   }
   return 1;
   
