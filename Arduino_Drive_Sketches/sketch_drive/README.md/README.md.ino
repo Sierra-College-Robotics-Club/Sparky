@@ -6,11 +6,9 @@
 
 #include <ros.h>
 #include <geometry_msgs/Twist.h>
-#include <std_msgs/String.h>
 
 ros::NodeHandle  nh;
-std_msgs::String str_msg;
-ros::Publisher chatter("chatter", &str_msg);
+
 
 // uno r3
 // #define leftMotor1 3
@@ -30,16 +28,15 @@ ros::Publisher chatter("chatter", &str_msg);
 // A on motor driver
 // currently left motor
 // B2 is 5
-// B1 is 4
-#define rightMotor1 2 //A
-#define rightMotor2 4 //A
-#define rightMotorEnable 10
-#define rightEncoder 6
+#define rightMotor1 4 //A
+#define rightMotor2 3 //A
+#define rightMotorEnable 2
+#define rightEncoder 8
 
-#define leftMotor1 8
-#define leftMotor2 9
+#define leftMotor1 5
+#define leftMotor2 6
 #define leftMotorEnable 7
-#define leftEncoder 3
+#define leftEncoder 9
 
 // IR sensor pins
 // #define leftIR 9
@@ -62,7 +59,7 @@ const int maxSetSpeed = 45;
 const int minSetSpeed = 55; //need to test to find real value
  
 // these are also experimental values, needed to find
-const int maxAnalog = 254;
+const int maxAnalog = 230;
 const int minAnalog = 200;
 
 
@@ -202,7 +199,7 @@ void leftMotorSpeed( bool dir, int speed){
     digitalWrite(leftMotor1, LOW);
     digitalWrite(leftMotor2, HIGH);
     analogWrite(leftMotorEnable, analogSpeed);
-    }
+  }
 }
 
 void rotateRobot(bool dir, int speed){
@@ -286,6 +283,57 @@ int fireExtinguish(bool leftIRState, bool rightIRState, int speed){
   
 }
 
+int rotationalspeed = 230;
+int movespeedstd = 230;
+// TWIST HANDLING
+void MoveFwd() {
+  leftMotorSpeed(true, movespeedstd);
+  rightMotorSpeed(true, movespeedstd);
+}
+
+void MoveStop() {
+  leftMotorSpeed(true, 0);
+  rightMotorSpeed(true, 0);
+}
+
+void MoveLeft() {
+  rotateRobot(false, rotationalspeed);
+}
+
+void MoveRight() {
+  rotateRobot(true, rotationalspeed);
+}
+
+void MoveBack() {
+  leftMotorSpeed(false, movespeedstd);
+  rightMotorSpeed(false, movespeedstd);
+}
+
+void cmd_vel_cb(const geometry_msgs::Twist & msg) {
+  // Read the message. Act accordingly.
+  // We only care about the linear x, and the rotational z.
+  const float x = msg.linear.x;
+  const float z_rotation = msg.angular.z;
+
+  // Decide on the morot state we need, according to command.
+  if (x > 0 && z_rotation == 0) {
+    MoveFwd();
+  }
+  else if (x == 0 && z_rotation == 1) {
+    MoveRight();
+  }
+else if (x == 0 && z_rotation < 0) {
+    MoveLeft();
+  }
+else if (x < 0 && z_rotation == 0) {
+    MoveBack();
+  }
+else{
+    MoveStop();
+  }
+}
+
+ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", cmd_vel_cb);
 void setup() {
  // hi
  // 254 seems to inconsistently work
@@ -294,38 +342,22 @@ void setup() {
   // guess forwards
   //rightMotorSpeed(true, 254);
 
-  attachInterrupt(digitalPinToInterrupt(leftIR), RISR, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(rightIR), LISR, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(leftIR), RISR, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(rightIR), LISR, CHANGE);
 
   attachInterrupt(digitalPinToInterrupt(leftEncoder), REISR, RISING);
   attachInterrupt(digitalPinToInterrupt(rightEncoder), LEISR, FALLING);
+
+  nh.initNode();
+  nh.subscribe(sub);
 }
+
+
 
 void loop() {
 
-  //lets test the directions of the motors
-  // guess forwards this is true
-  //leftMotorSpeed(true, 255);
-  // guess forwards
- // rightMotorSpeed(true, 255);
-  
-  rightMotorSpeed(true, 250);
-  leftMotorSpeed(true, 250);
-  delay(1000);
-  rotateRobot(true, 255);
-  delay(1000);
-  leftMotorSpeed(true, 250);
-  rightMotorSpeed(true, 250);
-  delay(1000);
-  rotateRobot(false, 255);
-  delay(1000);
-  leftMotorSpeed(false, 250);
-  leftMotorSpeed(false, 250);
-  delay(1000);
-
-
-
-
+  delay(10);
+  nh.spinOnce();
 
   /*
   // motors should start from as close to the begginning of the loop
