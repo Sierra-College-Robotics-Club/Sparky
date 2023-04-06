@@ -1,15 +1,3 @@
-#if (ARDUINO >= 100)
-#include <Arduino.h>
-#else
-#include <WProgram.h>
-#endif
-
-#include <ros.h>
-#include <geometry_msgs/Twist.h>
-
-ros::NodeHandle  nh;
-
-
 // uno r3
 // #define leftMotor1 3
 // #define leftMotor2 5
@@ -28,15 +16,26 @@ ros::NodeHandle  nh;
 // A on motor driver
 // currently left motor
 // B2 is 5
-#define rightMotor1 4 //A
-#define rightMotor2 3 //A
-#define rightMotorEnable 2
-#define rightEncoder 8
+#define rightMotor1 8 //B
+#define rightMotor2 9
+#define rightMotorEnable 10
+#define rightEncoder 18
 
-#define leftMotor1 5
-#define leftMotor2 6
-#define leftMotorEnable 7
-#define leftEncoder 9
+#define leftMotor1 11 //A
+#define leftMotor2 12
+#define leftMotorEnable 13
+#define leftEncoder 2
+
+
+// ULTRASONICS
+#define trigPin1 22 // fwd
+#define echoPin1 23
+
+#define trigPin2 24 // left
+#define echoPin2 25
+
+#define trigPin3 26 // right
+#define echoPin3 27
 
 // IR sensor pins
 // #define leftIR 9
@@ -48,7 +47,7 @@ ros::NodeHandle  nh;
 const int maxPossSpeed = 253;
 const int minPossSpeed = 150;
 
-const int encoderDelay = 1000; // delay for the encoder count readings for PID in ms
+const int encoderDelay = 100; // delay for the encoder count readings for PID in ms
 const int EISRDelay = 2; // delay for debouncing encoder ISRs
 const int ISRDelay = 100; // delay for debouncing IR ISRs
 
@@ -99,12 +98,31 @@ short lPrevPIDTime = millis();
 long rEncoderCount = 0;
 long lEncoderCount = 0;
 
+int get_distance(int echoPin, int trigPin) {
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+ 
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+ 
+    digitalWrite(trigPin, LOW);
+    int duration = pulseIn(echoPin, HIGH);
+    int distance = duration * 0.0344 / 2;
+
+    return distance;
+}
+
 // this funciton takes a boolean for polarity and integer speed in RPM for angular velocity
 // this also uses a PID loop to compare the encoder values of the wheels to adjust the speed the wheel
 void rightMotorSpeed(bool dir, int speed){
   // validating speed as min and max set value in rpm
   if(speed > maxSetSpeed) speed = maxSetSpeed;
-  if(speed < minSetSpeed) speed = minSetSpeed;
+  if(speed < minSetSpeed) {
+    analogWrite(rightMotorEnable, 0);
+    return;
+  }
+
+  if (rErrP < 1) rErrP = 5;
 
   long fEncoderCount = rEncoderCount;
   delay(encoderDelay); // wait 100 ms for sample
@@ -155,7 +173,12 @@ void rightMotorSpeed(bool dir, int speed){
 void leftMotorSpeed( bool dir, int speed){
   // validating speed as min and max set value in rpm
   if(speed > maxSetSpeed) speed = maxSetSpeed;
-  if(speed < minSetSpeed) speed = minSetSpeed;
+  if(speed < minSetSpeed) {
+    analogWrite(leftMotorEnable, 0);
+    return;
+  }
+
+  if (lErrP < 1) lErrP = 5;
 
   long fEncoderCount = lEncoderCount;
   delay(encoderDelay); // wait 100 ms for sample
@@ -283,92 +306,116 @@ int fireExtinguish(bool leftIRState, bool rightIRState, int speed){
   
 }
 
-int rotationalspeed = 230;
-int movespeedstd = 230;
-// TWIST HANDLING
-void MoveFwd() {
-  leftMotorSpeed(true, movespeedstd);
-  rightMotorSpeed(true, movespeedstd);
+int rotationalspeed = 201;
+int movespeedstd = 201;
+
+void setup() {
+  pinMode(trigPin1, OUTPUT);
+  pinMode(echoPin1, INPUT);
+
+  pinMode(trigPin2, OUTPUT);
+  pinMode(echoPin2, INPUT);
+
+  pinMode(trigPin3, OUTPUT);
+  pinMode(echoPin3, INPUT);
+
+  pinMode(rightMotor1, OUTPUT);
+  pinMode(rightMotor2, OUTPUT);
+  pinMode(rightMotorEnable, OUTPUT);
+  pinMode(rightEncoder, INPUT);
+
+  pinMode(leftMotor1, OUTPUT);
+  pinMode(leftMotor2, OUTPUT);
+  pinMode(leftMotorEnable, OUTPUT);
+  pinMode(leftEncoder, INPUT);
+
+  digitalWrite(rightMotor1, LOW);
+  digitalWrite(rightMotor2, LOW);
+  digitalWrite(leftMotor1, LOW);
+  digitalWrite(leftMotor2, LOW);
+  digitalWrite(rightMotorEnable, LOW);
+  digitalWrite(leftMotorEnable, LOW);
+
+  Serial.begin(9600);
+
+  attachInterrupt(digitalPinToInterrupt(leftEncoder), LEISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(rightEncoder), REISR, RISING);
 }
 
-void MoveStop() {
+//cm
+int optimalleftdist = 50;
+int unoptimalfwddist = 50;
+int rightthreashhold = 100;
+int leftthreashhold = 100;
+
+bool turning = false;
+bool leftturning = false;
+int startturnticks = 0;
+int desiredticks = 3000;
+
+void left_turn() {
+  leftturning = true;
+  turning = true;
+  startturnticks = lEncoderCount;
+  leftMotorSpeed(true, 0);
+  rightMotorSpeed(true, 255);
+}
+
+void right_turn() {
+  leftturning = false;
+  turning = true;
+  startturnticks = rEncoderCount;
+  leftMotorSpeed(true, 255);
+  rightMotorSpeed(true, 0);
+}
+
+void stop() {
   leftMotorSpeed(true, 0);
   rightMotorSpeed(true, 0);
 }
 
-void MoveLeft() {
-  rotateRobot(false, rotationalspeed);
+void go_forward() {
+  leftMotorSpeed(true, 255);
+  rightMotorSpeed(true, 255);
 }
 
-void MoveRight() {
-  rotateRobot(true, rotationalspeed);
+void stop_turning() {
+  turning = false;
 }
-
-void MoveBack() {
-  leftMotorSpeed(false, movespeedstd);
-  rightMotorSpeed(false, movespeedstd);
-}
-
-void cmd_vel_cb(const geometry_msgs::Twist & msg) {
-  // Read the message. Act accordingly.
-  // We only care about the linear x, and the rotational z.
-  const float x = msg.linear.x;
-  const float z_rotation = msg.angular.z;
-
-  // Decide on the morot state we need, according to command.
-  if (x > 0 && z_rotation == 0) {
-    MoveFwd();
-  }
-  else if (x == 0 && z_rotation == 1) {
-    MoveRight();
-  }
-else if (x == 0 && z_rotation < 0) {
-    MoveLeft();
-  }
-else if (x < 0 && z_rotation == 0) {
-    MoveBack();
-  }
-else{
-    MoveStop();
-  }
-}
-
-ros::Subscriber<geometry_msgs::Twist> sub("cmd_vel", cmd_vel_cb);
-void setup() {
- // hi
- // 254 seems to inconsistently work
- // 253 works
-  //leftMotorSpeed(true, 254);
-  // guess forwards
-  //rightMotorSpeed(true, 254);
-
-  // attachInterrupt(digitalPinToInterrupt(leftIR), RISR, CHANGE);
-  // attachInterrupt(digitalPinToInterrupt(rightIR), LISR, CHANGE);
-
-  attachInterrupt(digitalPinToInterrupt(leftEncoder), REISR, RISING);
-  attachInterrupt(digitalPinToInterrupt(rightEncoder), LEISR, FALLING);
-
-  nh.initNode();
-  nh.subscribe(sub);
-}
-
-
 
 void loop() {
-
-  delay(10);
-  nh.spinOnce();
-
-  /*
-  // motors should start from as close to the begginning of the loop
-  // as practical to delay power cycle motor delay
-
-  /*
-
-  delay(3000);
-
-
-  // needed to reset motor power signal on motor power on/off
-  */
-
+  // int fwd = get_distance(echoPin1, trigPin1);
+  // int left = get_distance(echoPin2, trigPin2);
+  // int right = get_distance(echoPin3, trigPin3);
+  // // Serial.print("FWD ");
+  // // Serial.println(fwd);
+  // // Serial.print("LEFT ");
+  // // Serial.println(left);
+  // // Serial.print("RIGHT ");
+  // // Serial.println(right);
+  // if (!turning) {
+  //   if (left > leftthreashhold) {
+  //     left_turn();
+  //     Serial.println("left");
+  //   } else if (right > rightthreashhold && fwd <= unoptimalfwddist) {
+  //     right_turn();
+  //     Serial.println("right");
+  //   } else if (fwd > unoptimalfwddist) {
+  //     go_forward();
+  //     Serial.println("fwd");
+  //   } else {
+  //     Serial.println("stop");
+  //     stop();
+  //   }
+  // } else {
+  //   if (leftturning) {
+  //     if ((lEncoderCount - startturnticks) >= desiredticks) {
+  //       stop_turning();
+  //     }
+  //   } else {
+  //     if ((lEncoderCount - startturnticks) >= desiredticks) {
+  //       stop_turning();
+  //     }
+  //   }
+  // }   
 }
