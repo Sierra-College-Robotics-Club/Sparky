@@ -1,21 +1,9 @@
-// uno r3
-// #define leftMotor1 3
-// #define leftMotor2 5
-// #define rightMotor1 10
-// #define rightMotor2 11
+#include <math.h>
+#include <string.h>
 
+#define fanenable 40
+const int edgedetectorpin = A2;
 
-// atremis
-// B on motor driver
-// currently right motor
-// Motor A is left Motor B is right
-// A2 is pin 2
-// A1 is pin 3
-// L1 : 2, L2 : 3, R1 : 4, R2 : 5 | old
-
-// A on motor driver
-// currently left motor
-// B2 is 5
 #define rightMotor1 8 //B
 #define rightMotor2 9
 #define rightMotorEnable 10
@@ -26,6 +14,8 @@
 #define leftMotorEnable 13
 #define leftEncoder 2
 
+#define leftirpin 30
+#define rightirpin 31
 
 // ULTRASONICS
 #define trigPin1 22 // fwd
@@ -37,30 +27,12 @@
 #define trigPin3 26 // right
 #define echoPin3 27
 
-// IR sensor pins
-// #define leftIR 9
-// #define rightIR 10
-
-// Possible limitation for the motor driver and PWM signal setup
-// analog writing 254 seems to usually work, 253 has never failed
-// now in rpm, ultimately these will be experimental
-const int maxPossSpeed = 253;
-const int minPossSpeed = 150;
-
 const int encoderDelay = 100; // delay for the encoder count readings for PID in ms
 const int EISRDelay = 2; // delay for debouncing encoder ISRs
 const int ISRDelay = 100; // delay for debouncing IR ISRs
 
-// these need to be experimental tests, in RPM
-// for now lets say 40 and 60
-// in analog write that is somewhere around 200-254
-const int maxSetSpeed = 45;
-const int minSetSpeed = 55; //need to test to find real value
- 
-// these are also experimental values, needed to find
 const int maxAnalog = 230;
-const int minAnalog = 200;
-
+const int minAnalog = 100;
 
 volatile bool rightIRState = false;
 volatile bool leftIRState = false;
@@ -73,32 +45,12 @@ long lastTimeLISR = 0;
 long lastTimeREISR = 0;
 long lastTimeLEISR = 0;
 
-
-
-
-long rPIDInt = millis();
-// short sp;
-// short err;
-// short cv;
-// short pv; // calculated from encoder velcory
-
-short kp = 1;
-short ki = 0.05;
-short kd = 0.01;
-
-short lIntP;
-short lErrP;
-
-short rIntP;
-short rErrP;
-
-short rPrevPIDTime = millis();
-short lPrevPIDTime = millis();
-
 long rEncoderCount = 0;
 long lEncoderCount = 0;
 
-int get_distance(int echoPin, int trigPin) {
+int navmode = 1;
+
+float get_distance(int echoPin, int trigPin) {
     digitalWrite(trigPin, LOW);
     delayMicroseconds(2);
  
@@ -106,8 +58,8 @@ int get_distance(int echoPin, int trigPin) {
     delayMicroseconds(10);
  
     digitalWrite(trigPin, LOW);
-    int duration = pulseIn(echoPin, HIGH);
-    int distance = duration * 0.0344 / 2;
+    float duration = pulseIn(echoPin, HIGH);
+    float distance = duration * 0.0344 / 2;
 
     return distance;
 }
@@ -115,132 +67,41 @@ int get_distance(int echoPin, int trigPin) {
 // this funciton takes a boolean for polarity and integer speed in RPM for angular velocity
 // this also uses a PID loop to compare the encoder values of the wheels to adjust the speed the wheel
 void rightMotorSpeed(bool dir, int speed){
-  // validating speed as min and max set value in rpm
-  if(speed > maxSetSpeed) speed = maxSetSpeed;
-  if(speed < minSetSpeed) {
-    analogWrite(rightMotorEnable, 0);
-    return;
-  }
-
-  if (rErrP < 1) rErrP = 5;
-
-  long fEncoderCount = rEncoderCount;
-  delay(encoderDelay); // wait 100 ms for sample
-  long sEncoderCount = rEncoderCount;
-
-  short sp = speed; 
-
-  // pv is the rotations per units time, currently encoderDelay in ms
-  short pv = ((sEncoderCount-fEncoderCount)/(74.83*12))/encoderDelay; // 74.83 rotations of motor shaft per wheel rotation (gear box) * 12 encoder rising edges per motor shaft (encoder ticks)
-  short err = sp - pv;
-
-  short cycleTime = millis() -  rPrevPIDTime;
-  short I = rIntP + ki * err * cycleTime;
-
-  short cv = kp * err + I + kd * (err - rErrP) / cycleTime;
-
-  rPrevPIDTime = millis();
-  rErrP = err;
-  rIntP = I;
-
-  // validating speed as min and max possible value as rpm
-  if(cv > maxPossSpeed) cv = maxPossSpeed;
-  if(cv < minPossSpeed) cv = minPossSpeed;
-
-  // mapping the valid range cv (rpm) to valid range analogMin, analogMax
-  // assuming analogMax will give maxPossSpeed linearly
-  // analogSpeed takes cv(rpm) and multiplies it by the ratio of the range of analog signals to the range of rpm
-  int analogSpeed = floor(cv*((maxAnalog-minAnalog)/(maxPossSpeed-minPossSpeed)));
-  
-  // validating output of analog write mapping as between min and max possible analog signals
-  if(analogSpeed > maxAnalog) analogSpeed = maxAnalog;
-  if(analogSpeed < minAnalog) analogSpeed = minAnalog;
+  if (speed > maxAnalog) speed = maxAnalog;
 
   //if true, go forwards
   if(dir == true){
     digitalWrite(rightMotor1, HIGH);
     digitalWrite(rightMotor2, LOW);
-    analogWrite(rightMotorEnable, analogSpeed);
+    analogWrite(rightMotorEnable, speed);
   }
   //else, go backwards
   else{
     digitalWrite(rightMotor1, LOW); 
     digitalWrite(rightMotor2, HIGH); 
-    analogWrite(rightMotorEnable, analogSpeed);
+    analogWrite(rightMotorEnable, speed);
     }
 }
 
 void leftMotorSpeed( bool dir, int speed){
-  // validating speed as min and max set value in rpm
-  if(speed > maxSetSpeed) speed = maxSetSpeed;
-  if(speed < minSetSpeed) {
-    analogWrite(leftMotorEnable, 0);
-    return;
-  }
+  if (speed > maxAnalog) speed = maxAnalog;
 
-  if (lErrP < 1) lErrP = 5;
-
-  long fEncoderCount = lEncoderCount;
-  delay(encoderDelay); // wait 100 ms for sample
-  long sEncoderCount = lEncoderCount;
-
-  short sp = speed; 
-
-  // pv is the rotations per units time, currently encoderDelay in ms
-  short pv = ((sEncoderCount-fEncoderCount)/(74.83*12))/encoderDelay; // 74.83 rotations of motor shaft per wheel rotation (gear box) * 12 encoder rising edges per motor shaft (encoder ticks)
-  short err = sp - pv;
-
-  short cycleTime = millis() -  lPrevPIDTime;
-  short I = lIntP + ki * err * cycleTime;
-
-  short cv = kp * err + I + kd * (err - lErrP) / cycleTime;
-
-  lPrevPIDTime = millis();
-  lErrP = err;
-  lIntP = I;
-
-  // validating speed as min and max possible value as rpm
-  if(cv > maxPossSpeed) cv = maxPossSpeed;
-  if(cv < minPossSpeed) cv = minPossSpeed;
-
-  // mapping the valid range cv (rpm) to valid range analogMin, analogMax
-  // assuming analogMax will give maxPossSpeed linearly
-  // analogSpeed takes cv(rpm) and multiplies it by the ratio of the range of analog signals to the range of rpm
-  int analogSpeed = floor(cv*((maxAnalog-minAnalog)/(maxPossSpeed-minPossSpeed)));
-
-  if(analogSpeed > maxAnalog) analogSpeed = maxAnalog;
-  if(analogSpeed < minAnalog) analogSpeed = minAnalog;
+  // if (speed <= 1) {
+  //   digitalWrite(leftMotorEnable, LOW);
+  //   return;
+  // }
 
   //if true, go forwards
   if(dir == true){
     digitalWrite(leftMotor1, HIGH);
     digitalWrite(leftMotor2, LOW);  
-    analogWrite(leftMotorEnable, analogSpeed);  
+    analogWrite(leftMotorEnable, speed);  
   }
   //else, go backwards
   else{
     digitalWrite(leftMotor1, LOW);
     digitalWrite(leftMotor2, HIGH);
-    analogWrite(leftMotorEnable, analogSpeed);
-  }
-}
-
-void rotateRobot(bool dir, int speed){
-  if(speed > maxPossSpeed) speed = maxPossSpeed;
-  if(speed < minPossSpeed) speed = minPossSpeed;
-
-  // we might want to do something tricky with the speeds being passed to each motor
-
-  //if true, roatate clockwise
-  if(dir == true){
-    leftMotorSpeed(true, speed);
-    rightMotorSpeed(false, speed);
-  }
-
-  //else, rotate counterclockwise
-  if(dir == false){
-    leftMotorSpeed(false, speed);
-    rightMotorSpeed(true, speed);
+    analogWrite(leftMotorEnable, speed);
   }
 }
 
@@ -251,7 +112,6 @@ void RISR(){
     if(rightIRState == true) rightIRState = false;
     lastTimeRISR = millis();
   }
-  
 }
 
 void LISR(){
@@ -278,38 +138,12 @@ void LEISR(){
   }
 }
 
-// privilege right IR sensor
-// turn ccw until only the right IR is active
-// the stop and turn cw
-// measure time util only left IR is active
-// turn ccw for half time
-// both IR should be active
-// fire should be centered on fan
-
-// drive forwards some constant measured distance, from testing
-// robot_move is forwards
-
-int fireExtinguish(bool leftIRState, bool rightIRState, int speed){
-  int rotate_start_time = millis();
-
-  if( ((rightIRState == true) && (leftIRState == false)) || ((rightIRState == false) && (leftIRState == true))) {
-    if(rightIRState == true){
-      rotateRobot(true, 250);
-    }
-    else if(leftIRState == true){
-      rotateRobot(false, 250);
-    }
-  } else {
-    // go forward robot
-  }
-  return 1;
-  
-}
-
-int rotationalspeed = 201;
-int movespeedstd = 201;
-
 void setup() {
+  pinMode(fanenable, OUTPUT);
+  pinMode(edgedetectorpin, INPUT);
+  pinMode(leftirpin, INPUT);
+  pinMode(rightirpin, INPUT);
+
   pinMode(trigPin1, OUTPUT);
   pinMode(echoPin1, INPUT);
 
@@ -342,80 +176,244 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(rightEncoder), REISR, RISING);
 }
 
-//cm
-int optimalleftdist = 50;
-int unoptimalfwddist = 50;
-int rightthreashhold = 100;
-int leftthreashhold = 100;
+void closest_point_on_line(int projection[2], float point1[2], float point2[2]) {
+    float position[2] = {0, 0};
+    float line_vec[2] = {point2[0] - point1[0], point2[1] - point1[1]};
+    float point_vec[2] = {position[0] - point1[0], position[1] - point1[1]};
+    float line_len = sqrt(pow(line_vec[0], 2) + pow(line_vec[1], 2));
+    float line_unitvec[2] = {line_vec[0] / line_len, line_vec[1] / line_len};
+    float projection_len = point_vec[0] * line_unitvec[0] + point_vec[1] * line_unitvec[1];
+    projection[0] = point1[0] + line_unitvec[0] * projection_len;
+    projection[1] = point1[1] + line_unitvec[1] * projection_len;
+}
 
-bool turning = false;
-bool leftturning = false;
-int startturnticks = 0;
-int desiredticks = 3000;
+const float desiredDistance = 10.0; // in centimeters
+const int regularSpeed = 135;
+const int speedupSpeed = 110;
+const int slowdownSpeed = 40;
+const int adjustSpeed = 12;
 
-void left_turn() {
+int turningstate = 0;
+int leftturning = false;
+int startingencoderticks = 0;
+
+int turnthreashold = 46;
+
+void turn_left() {
+  leftMotorSpeed(true, 0);
+  rightMotorSpeed(true, 0);
+  delay(500);
+  startingencoderticks = rEncoderCount;
+  turningstate = -1;
   leftturning = true;
-  turning = true;
-  startturnticks = lEncoderCount;
-  leftMotorSpeed(true, 0);
-  rightMotorSpeed(true, 255);
 }
 
-void right_turn() {
+void turn_right() {
+  leftMotorSpeed(true, 0);
+  rightMotorSpeed(true, 0);
+  delay(500);
+  leftMotorSpeed(false, 255);
+  rightMotorSpeed(false, 255);
+  delay(500);
+  leftMotorSpeed(true, 0);
+  rightMotorSpeed(true, 0);
+  delay(500);
+  startingencoderticks = lEncoderCount;
+  turningstate = 1;
   leftturning = false;
-  turning = true;
-  startturnticks = rEncoderCount;
-  leftMotorSpeed(true, 255);
-  rightMotorSpeed(true, 0);
-}
-
-void stop() {
-  leftMotorSpeed(true, 0);
-  rightMotorSpeed(true, 0);
-}
-
-void go_forward() {
-  leftMotorSpeed(true, 255);
-  rightMotorSpeed(true, 255);
-}
-
-void stop_turning() {
-  turning = false;
 }
 
 void loop() {
-  // int fwd = get_distance(echoPin1, trigPin1);
-  // int left = get_distance(echoPin2, trigPin2);
-  // int right = get_distance(echoPin3, trigPin3);
-  // // Serial.print("FWD ");
-  // // Serial.println(fwd);
-  // // Serial.print("LEFT ");
-  // // Serial.println(left);
-  // // Serial.print("RIGHT ");
-  // // Serial.println(right);
-  // if (!turning) {
-  //   if (left > leftthreashhold) {
-  //     left_turn();
-  //     Serial.println("left");
-  //   } else if (right > rightthreashhold && fwd <= unoptimalfwddist) {
-  //     right_turn();
-  //     Serial.println("right");
-  //   } else if (fwd > unoptimalfwddist) {
-  //     go_forward();
-  //     Serial.println("fwd");
-  //   } else {
-  //     Serial.println("stop");
-  //     stop();
-  //   }
-  // } else {
-  //   if (leftturning) {
-  //     if ((lEncoderCount - startturnticks) >= desiredticks) {
-  //       stop_turning();
-  //     }
-  //   } else {
-  //     if ((lEncoderCount - startturnticks) >= desiredticks) {
-  //       stop_turning();
-  //     }
-  //   }
-  // }   
+  int leftir = digitalRead(leftirpin);
+  int rightir = digitalRead(rightirpin);
+
+  int edgedetector = analogRead(edgedetectorpin);
+    Serial.println(edgedetector);
+  if (edgedetector < 100) {
+    edgedetector = 1;
+  }
+  if (leftir == 1 || rightir == 1) {
+    navmode = 2;
+  }
+  if (navmode == 2) {
+    if (edgedetector == 1) {
+      digitalWrite(fanenable, HIGH);
+      if (0 == 1) {
+        leftMotorSpeed(true, 130);
+        rightMotorSpeed(false, 130);
+        delay(200);
+        leftMotorSpeed(true, 0);
+        rightMotorSpeed(false, 0);
+        delay(1000);
+
+        leftMotorSpeed(false, 130);
+        rightMotorSpeed(true, 130);
+        delay(200);
+        leftMotorSpeed(true, 0);
+        rightMotorSpeed(false, 0);
+        delay(1000);
+      }
+    } else {
+
+      if (leftir == 1 && rightir == 1) {
+        leftMotorSpeed(true, 0);
+        rightMotorSpeed(true, 0);
+        delay(300);
+        leftMotorSpeed(true, 130);
+        rightMotorSpeed(true, 130);
+        delay(300);
+      } else if (leftir == 1) {
+        leftMotorSpeed(true, 0);
+        rightMotorSpeed(true, 130);
+      } else if (rightir == 1) {
+        leftMotorSpeed(true, 130);
+        rightMotorSpeed(true, 0);      
+      } else {
+        leftMotorSpeed(true, 130);
+        rightMotorSpeed(false, 130);
+        delay(200);
+        leftMotorSpeed(true, 0);
+        rightMotorSpeed(false, 0);
+        delay(1000);
+
+        leftMotorSpeed(false, 130);
+        rightMotorSpeed(true, 130);
+        delay(200);
+        leftMotorSpeed(true, 0);
+        rightMotorSpeed(false, 0);
+        delay(1000);
+      }
+    }
+  } 
+  if (navmode == 1) {
+    float fwd = get_distance(echoPin1, trigPin1);  
+    float leftfront = get_distance(echoPin2, trigPin2);
+    delay(10);
+    float leftback = get_distance(echoPin3, trigPin3);
+    delay(10);
+
+    int encoderChange;
+    if (turningstate != 0) {
+      if (leftturning) {
+        encoderChange = rEncoderCount - startingencoderticks;
+      } else {
+        encoderChange = lEncoderCount - startingencoderticks;
+      }
+      if (turningstate == -1) {
+        leftMotorSpeed(false, 255);
+        rightMotorSpeed(false, 255);
+        delay(500);
+        leftMotorSpeed(true, 255);
+        rightMotorSpeed(true, 255);
+        delay(350);
+        leftMotorSpeed(false, 0);
+        rightMotorSpeed(false, 0);
+        startingencoderticks = rEncoderCount;
+        turningstate = 1;
+        delay(200);
+      } else if (turningstate == 1) {
+        if (leftturning) {
+          leftMotorSpeed(true, 0);
+          rightMotorSpeed(true, 135);
+        } else {
+          leftMotorSpeed(true, 135);
+          rightMotorSpeed(true, 0);
+        }
+        if (leftturning) {
+          if (encoderChange > 350) {
+            turningstate = 2;
+            startingencoderticks = rEncoderCount;
+          }
+        } else {
+          if (encoderChange > 350) {
+            turningstate = 0;
+            startingencoderticks = rEncoderCount;
+          }
+        }
+      } else if (turningstate == 2) {    
+        leftfront = get_distance(echoPin2, trigPin2); 
+        if (leftfront <= 22 && leftback <= 22) {
+          turningstate = 0;
+        } else if (leftfront <= 400) {
+          leftMotorSpeed(true, 255);
+          rightMotorSpeed(true, 255);
+          delay(700);
+          leftMotorSpeed(true, 0);
+          rightMotorSpeed(true, 0);
+          turningstate = 0;
+          delay(200);
+        } else {
+          // startingencoderticks = rEncoderCount;
+
+          leftMotorSpeed(true, 255);
+          rightMotorSpeed(true, 255);
+
+          delay(700);
+          leftMotorSpeed(true, 0);
+          rightMotorSpeed(true, 0);
+
+          turningstate = -1;
+          delay(500);
+          // turningstate = 0;
+        }
+      } else if (turningstate == 3) {
+
+      }
+    } else {
+      int projection[2];
+      float point1[2] = {13, leftfront};
+      float point2[2] = {0, leftback};
+      closest_point_on_line(projection, point1, point2);
+      double diff = leftfront - leftback;
+      float distance = hypot(projection[0], projection[1]);
+      float offset = distance - desiredDistance;
+      
+      int speedmodL = 0;
+      int speedmodR = 0;
+
+      int maxspeedmox = 125;
+
+      if (offset > 0) {
+        speedmodR = abs(offset) * adjustSpeed;
+        if (speedmodR > maxspeedmox) {
+          speedmodR = maxspeedmox;
+        }
+      } else {
+        speedmodL = (abs(offset) * adjustSpeed);
+        if (speedmodL > maxspeedmox) {
+          speedmodL = maxspeedmox;
+        }
+      }
+
+  ////////////
+      if (fwd > 900) {
+        leftMotorSpeed(false, 130);
+        rightMotorSpeed(false, 130);
+        delay(1000);
+        leftMotorSpeed(false, 0);
+        rightMotorSpeed(false, 0);
+        delay(200);
+      } else if (leftfront >= 22) {
+        turn_left();
+      } else if (fwd <= 8) {
+        turn_right();    
+      }
+
+      int cspeedup = abs(diff * 70);
+
+      if (diff > 0) {
+        leftMotorSpeed(true, regularSpeed - cspeedup + speedmodL);
+        rightMotorSpeed(true, regularSpeed + cspeedup + speedmodR);
+      } else if (diff < 0) {
+        if (abs(diff) < 280) {
+          leftMotorSpeed(true, regularSpeed + cspeedup + speedmodL); // regular right case
+          rightMotorSpeed(true, regularSpeed - cspeedup + speedmodR);
+        } else {
+          leftMotorSpeed(true, regularSpeed - cspeedup);
+          rightMotorSpeed(true, regularSpeed + cspeedup);
+        }
+      }
+    } 
+  }
+
 }
