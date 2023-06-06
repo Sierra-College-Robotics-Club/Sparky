@@ -2,8 +2,8 @@
   
 #define MAX_DISTANCE 800
   
-NewPing sonar1(29, 28, MAX_DISTANCE);
-NewPing sonar2(27, 26, MAX_DISTANCE);
+NewPing backsonar(29, 28, MAX_DISTANCE);
+NewPing frontsonar(27, 26, MAX_DISTANCE);
 
 #define LEnable 9
 #define LIN1 10
@@ -41,8 +41,8 @@ void setup() {
 }
 
 void lMotor(int speed, bool fwd) {
-  if (speed < analogMax) {
-    speed = 250;
+  if (speed > analogMax) {
+    speed = analogMax;
   }
 
   if (fwd) {
@@ -74,36 +74,38 @@ void loop() {
   // get distances //
   delay(50);
   Serial.println("============");
-  Serial.print("1 Ping: ");
-  float ldist = sonar1.convert_cm(sonar1.ping_median(5));
-  Serial.print(ldist);
+  Serial.print("back  Ping: ");
+  float backdist = backsonar.convert_cm(backsonar.ping_median(5));
+  Serial.print(backdist);
   Serial.println("cm");
 
   delay(20);
 
-  Serial.print("2 Ping: ");
-  float rdist = sonar2.convert_cm(sonar2.ping_median(5));
-  Serial.print(rdist);
+  Serial.print("front Ping: ");
+  float frontdist = frontsonar.convert_cm(frontsonar.ping_median(5));
+  Serial.print(frontdist);
   Serial.println("cm");
   ///////////////////
 
   // set motors //
 
-  // test 1 //
-  float diff = ldist - rdist;
-  if (diff < 0) {
-    lMotor(50, true);
-    rMotor(100, true);
-  } else {
-    lMotor(100, true);
-    rMotor(50, true);
-  }
+  // // test 1 //
+  // float diff = backdist - frontdist;
+  // if (diff < 0) {
+  //   lMotor(50, true);
+  //   rMotor(100, true);
+  //   Serial.println("left");
+  // } else {
+  //   lMotor(100, true);
+  //   rMotor(50, true);
+  //   Serial.println("right");
+  // }
   ////////////
 
   // test 2 //
-  // float diff = ldist - rdist;
-  // lMotor(100 - (diff), true);
-  // rMotor(100 - (-diff), true);
+  float diff = backdist - frontdist;
+  lMotor(100 - (diff), true);
+  rMotor(100 - (-diff), true);
   ////////////
 
   ////////////////
