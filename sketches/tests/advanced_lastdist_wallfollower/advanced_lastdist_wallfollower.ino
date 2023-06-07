@@ -54,13 +54,8 @@ void setup() {
   Serial.begin(9600);
 
   // put your setup code here, to run once:
-  pinMode(LIN1, OUTPUT);
-  pinMode(LIN2, OUTPUT);
-  pinMode(LEnable, OUTPUT);
-
-  pinMode(RIN1, OUTPUT);
-  pinMode(RIN2, OUTPUT);
-  pinMode(REnable, OUTPUT);
+  /*Left Motor Pin Setup*/ pinMode(LIN1, OUTPUT);pinMode(LIN2, OUTPUT);pinMode(LEnable, OUTPUT);
+  /*Right Kyle Sleep*/pinMode(RIN1, OUTPUT);pinMode(RIN2, OUTPUT);pinMode(REnable, OUTPUT);
 
   digitalWrite(LIN1, HIGH);
   digitalWrite(LIN2, LOW);
@@ -81,15 +76,9 @@ void setup() {
 }
 
 void rMotor(int speed, bool fwd) {
-  if (RcurrentMotorSpeed == 0){
-    speed = motorStart;
-  }
-  if (speed > analogMax) {
-    speed = analogMax;
-  }
-  else if(speed < 50){
-    speed = analogMin;
-  }
+  if (RcurrentMotorSpeed == 0) speed = motorStart;
+  if (speed > analogMax) speed = analogMax;
+  else if(speed < 50) speed = analogMin;
 
   if (fwd) {
     digitalWrite(RIN1, HIGH);
@@ -104,16 +93,10 @@ void rMotor(int speed, bool fwd) {
 }
 
 void lMotor(int speed, bool fwd) {
-  if (LcurrentMotorSpeed == 0){
-    speed = motorStart;
-  }
-  if (speed < analogMax) {
-    speed = 250;
-  }
+  if (LcurrentMotorSpeed == 0) speed = motorStart;
+  if (speed < analogMax) speed = 250;
+  else if(speed < 50) speed = analogMin;
 
-  else if(speed < 50){
-    speed = analogMin;
-  }
 
   if (fwd) {
     digitalWrite(LIN1, HIGH);
@@ -160,8 +143,8 @@ void loop() {
   // if distance is starting to increese, switch turning direction
   // potential issure if this populates quicker than neccessarliy
   if ((history[0] > history[2]) && (history[1] > history[3])) {
-    if(currentDirection) {//turn ccw and set dir
-      rMotor(ccwLeftSpeed, true); lMotor(ccwRightSpeed, true);currentDirection = 0; }
+    if(currentDirection) { //turn ccw and set dir
+      rMotor(ccwLeftSpeed, true); lMotor(ccwRightSpeed, true); currentDirection = 0; }
     else {
       //turn cw and set dir
       rMotor(cwLeftSpeed, true); lMotor(cwRightSpeed, true);
