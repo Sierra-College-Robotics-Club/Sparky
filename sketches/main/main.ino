@@ -6,9 +6,9 @@
 NewPing sonar(29, 28, MAX_DISTANCE);
 NewPing sonar2(27, 26, MAX_DISTANCE);
 
-
 MOTOR lmotor(10, 11, 9);
 MOTOR rmotor(6, 7, 5);
+MOTOR_CONTROL motorcontrol(lmotor, rmotor);
 
 void setup() {
   Serial.begin(9600);

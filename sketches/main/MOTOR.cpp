@@ -1,6 +1,6 @@
 #include "MOTOR.h"
 
-MOTOR::MOTOR(int inputDirPin1, int inputDirPin2, int inputEnablePin, int input_ANALOG_MAX, int input_ANALOG_MIN, int input_ANALOG_START) {
+MOTOR::MOTOR(int inputDirPin1, int inputDirPin2, int inputEnablePin) {
   pinMode(inputDirPin1, OUTPUT);
   pinMode(inputDirPin2, OUTPUT);
   pinMode(inputEnablePin, OUTPUT);
@@ -12,12 +12,9 @@ MOTOR::MOTOR(int inputDirPin1, int inputDirPin2, int inputEnablePin, int input_A
   dirPin1 = inputDirPin1;
   dirPin2 = inputDirPin2;
   enablePin = inputEnablePin;
-
-  ANALOG_MAX = input_ANALOG_MAX;
-  ANALOG_MIN = input_ANALOG_MIN;
-  ANALOG_START = input_ANALOG_START;
 }
 
+//direction: true forwards, false backwards
 void MOTOR::setSpeed(int speed, bool direction) {
     if (currentSpeed == 0) speed = ANALOG_START; // give the motor a spike to start if needed
 
@@ -42,4 +39,65 @@ void MOTOR::setSpeed(int speed, bool direction) {
 void MOTOR::stop() {
     currentSpeed = 0;
     analogWrite(enablePin, 0);
+}
+
+/////////////////////////////////
+//////////MOTOR CONTROL///////O//
+/////////////////////////////////
+
+
+MOTOR_CONTROL::MOTOR_CONTROL(MOTOR& inputLeftMotor, MOTOR& inputRightMotor, int inputSpeedBalance) {
+    speedBalance = inputSpeedBalance;
+    leftMotor = inputLeftMotor;
+    rightMotor = inputRightMotor;
+}
+
+int MOTOR_CONTROL::contextializeSpeed(int speed) {
+    if(speed > 100) speed = 100;
+    if(speed < 0) speed = 0;
+
+    // bound speed to the max and min speed
+    int speedRatio = (int)(speed / ANALOG_MAX - ANALOG_MIN);
+    speed = speedRatio * 100 + ANALOG_MIN;
+
+    return speed;
+}
+
+void MOTOR_CONTROL::turnLeft(int turnspeed, int speed) {
+    speed = contextializeSpeed(speed);
+
+    if (speed-turnspeed <= 0) {
+        leftMotor.stop();
+    } else {
+        leftMotor.setSpeed(speed - turnspeed, true);
+    }
+    rightMotor.setSpeed(speed, true);
+}
+
+void MOTOR_CONTROL::turnRight(int turnspeed, int speed) {
+    speed = contextializeSpeed(speed);
+
+    if(speed-turnspeed <= 0) {
+        rightMotor.stop();
+    } else {
+        rightMotor.setSpeed(speed - turnspeed, true);
+    }
+    leftMotor.setSpeed(speed, true);
+}
+
+void MOTOR_CONTROL::stop() {
+    rightMotor.stop();
+    leftMotor.stop();
+}
+
+void MOTOR_CONTROL::swivelLeft(int speed) {
+    speed = contextializeSpeed(speed);
+    leftMotor.setSpeed(speed, false);
+    rightMotor.setSpeed(speed, true);
+}
+
+void MOTOR_CONTROL::swivelRight(int speed) {
+    speed = contextializeSpeed(speed);
+    leftMotor.setSpeed(speed, true);
+    rightMotor.setSpeed(speed, false);
 }
