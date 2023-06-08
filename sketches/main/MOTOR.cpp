@@ -31,8 +31,7 @@ void MOTOR::setSpeed(int speed, bool direction) {
     
     // give the motor a spike to start if needed
     if (currentSpeed == 0) {
-      speed = ANALOG_START;
-      analogWrite(enablePin, speed);
+      analogWrite(enablePin, ANALOG_START);
       delay(ANALOG_START_TIME)
     } 
   
