@@ -1,4 +1,5 @@
 #include <NewPing.h>
+#include <MOTOR.h>
 #define MAX_DISTANCE 300
 
 NewPing backsonar(29, 28, MAX_DISTANCE);
@@ -73,42 +74,46 @@ void setup() {
   rMotor(ccwLeftSpeed, true);
   lMotor(ccwRightSpeed, true);
   currentDirection = 0;
+
+  MOTOR lMotor = new MOTOR(LIN1, LIN2, LEnable);
+  MOTOR rMOTOR = new MOTOR(RIN1, RIN2, REnable);
+  MOTOR_CONTROL motorControl = new MOTOR_CONTROL(lMotor, rMotor, 30);
 }
 
-void rMotor(int speed, bool fwd) {
-  if (RcurrentMotorSpeed == 0) speed = motorStart;
-  if (speed > analogMax) speed = analogMax;
-  else if(speed < 50) speed = analogMin;
+// void rMotor(int speed, bool fwd) {
+//   if (RcurrentMotorSpeed == 0) speed = motorStart;
+//   if (speed > analogMax) speed = analogMax;
+//   else if(speed < 50) speed = analogMin;
 
-  if (fwd) {
-    digitalWrite(RIN1, HIGH);
-    digitalWrite(RIN2, LOW);
-  } else {
-    digitalWrite(RIN1, LOW);
-    digitalWrite(RIN2, HIGH);
-  }
+//   if (fwd) {
+//     digitalWrite(RIN1, HIGH);
+//     digitalWrite(RIN2, LOW);
+//   } else {
+//     digitalWrite(RIN1, LOW);
+//     digitalWrite(RIN2, HIGH);
+//   }
 
-  RcurrentMotorSpeed = speed;
-  analogWrite(REnable, speed);
-}
+//   RcurrentMotorSpeed = speed;
+//   analogWrite(REnable, speed);
+// }
 
-void lMotor(int speed, bool fwd) {
-  if (LcurrentMotorSpeed == 0) speed = motorStart;
-  if (speed < analogMax) speed = 250;
-  else if(speed < 50) speed = analogMin;
+// void lMotor(int speed, bool fwd) {
+//   if (LcurrentMotorSpeed == 0) speed = motorStart;
+//   if (speed < analogMax) speed = 250;
+//   else if(speed < 50) speed = analogMin;
 
 
-  if (fwd) {
-    digitalWrite(LIN1, HIGH);
-    digitalWrite(LIN2, LOW);
-  } else {
-    digitalWrite(LIN1, LOW);
-    digitalWrite(LIN2, HIGH);
-  }
+//   if (fwd) {
+//     digitalWrite(LIN1, HIGH);
+//     digitalWrite(LIN2, LOW);
+//   } else {
+//     digitalWrite(LIN1, LOW);
+//     digitalWrite(LIN2, HIGH);
+//   }
 
-  LcurrentMotorSpeed = speed;
-  analogWrite(LEnable, speed);
-}
+//   LcurrentMotorSpeed = speed;
+//   analogWrite(LEnable, speed);
+// }
 
 void loop() {
   delay(100);
@@ -145,12 +150,14 @@ void loop() {
   if ((history[0] > history[2]) && (history[1] > history[3])) {
     if(currentDirection) {
       //turn ccw and set dir
-      rMotor(ccwLeftSpeed, true); lMotor(ccwRightSpeed, true);
-      currentDirection = 0;
+      // rMotor(ccwLeftSpeed, true); lMotor(ccwRightSpeed, true);
+      // currentDirection = 0;
+      motorControl.turnLeft(30, 100);
     } else {
       //turn cw and set dir
-      rMotor(cwLeftSpeed, true); lMotor(cwRightSpeed, true);
-      currentDirection = 1;
+      // rMotor(cwLeftSpeed, true); lMotor(cwRightSpeed, true);
+      // currentDirection = 1;
+      motorControl.turnRight(30, 100);
     }
   }
 }
