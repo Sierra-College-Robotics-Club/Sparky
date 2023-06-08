@@ -68,25 +68,25 @@ int MOTOR_CONTROL::contextializeSpeed(int speed) {
 }
 
 void MOTOR_CONTROL::turnLeft(int turnspeed, int speed) {
-    speed = contextializeSpeed(speed);
-
-    if (speed-turnspeed <= 0) {
+    int contextspeed = contextializeSpeed(speed);
+    
+    if (speed == 0) {
         leftMotor.stop();
     } else {
-        leftMotor.setSpeed(speed - turnspeed, true);
+        leftMotor.setSpeed(contextspeed - turnspeed, true);
     }
-    rightMotor.setSpeed(speed, true);
+    rightMotor.setSpeed(contextspeed, true);
 }
 
 void MOTOR_CONTROL::turnRight(int turnspeed, int speed) {
-    speed = contextializeSpeed(speed);
-
-    if(speed-turnspeed <= 0) {
-        rightMotor.stop();
+    int contextspeed = contextializeSpeed(speed);
+    
+    if (speed == 0) {
+        leftMotor.stop();
     } else {
-        rightMotor.setSpeed(speed - turnspeed, true);
+        leftMotor.setSpeed(contextspeed, true);
     }
-    leftMotor.setSpeed(speed, true);
+    rightMotor.setSpeed(contextspeed - turnspeed, true);
 }
 
 void MOTOR_CONTROL::stop() {
