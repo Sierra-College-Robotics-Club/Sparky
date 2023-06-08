@@ -10,6 +10,10 @@
     #define ANALOG_START 200
 #endif
 
+#ifndef ANALOG_START_TIME
+    #define ANALOG_START_TIME 20
+#endif
+
 #ifndef MOTOR_h
 #define MOTOR_h
 
