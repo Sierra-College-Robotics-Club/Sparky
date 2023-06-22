@@ -15,15 +15,12 @@ void setup() {
 }
 
 void loop() {
-  delay(300);
-  Serial.println("============");
-  Serial.print("1 Ping: ");
-  Serial.print(sonar.convert_cm(sonar.ping_median(5)));
-  Serial.println("cm");
-
   delay(100);
+  // motorcontrol.swivelLeft(80);
 
-  Serial.print("2 Ping: ");
-  Serial.print(sonar2.convert_cm(sonar2.ping_median(5)));
-  Serial.println("cm");
+  // lmotor.setSpeed(210, true);
+  // rmotor.setSpeed(210, false);
+  motorcontrol.swivelLeft(80);
+  delay(100);
+  motorcontrol.swivelRight(80);
 }

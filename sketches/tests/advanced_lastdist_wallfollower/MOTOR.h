@@ -34,14 +34,14 @@ public:
 
 class MOTOR_CONTROL {
 private:
-    MOTOR leftMotor;   // Use a reference to MOTOR objects
-    MOTOR rightMotor;
+    MOTOR& leftMotor;   // Use a reference to MOTOR objects
+    MOTOR& rightMotor;
     int speedBalance;
 
     int contextializeSpeed(int speed);
 
 public:
-    MOTOR_CONTROL(MOTOR inputLeftMotor, MOTOR inputRightMotor, int inputSpeedBalance = 0);
+    MOTOR_CONTROL(MOTOR& inputLeftMotor, MOTOR& inputRightMotor, int inputSpeedBalance = 0);
     void turnLeft(int turnspeed, int speed = 255);
     void turnRight(int turnspeed, int speed = 255);
     void stop();

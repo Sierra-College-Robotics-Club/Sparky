@@ -1,4 +1,3 @@
-#include "HardwareSerial.h"
 #include "MOTOR.h"
 
 MOTOR::MOTOR(int inputDirPin1, int inputDirPin2, int inputEnablePin) {
@@ -29,7 +28,7 @@ void MOTOR::setSpeed(int speed, bool direction) {
         digitalWrite(dirPin1, LOW);
         digitalWrite(dirPin2, HIGH);
     }
-
+    
     // give the motor a spike to start if needed
     if (currentSpeed == 0) {
       analogWrite(enablePin, ANALOG_START);
@@ -38,7 +37,6 @@ void MOTOR::setSpeed(int speed, bool direction) {
   
     // write speed
     currentSpeed = speed;
-    Serial.println(currentSpeed);
     analogWrite(enablePin, speed);
 }
 
@@ -52,7 +50,7 @@ void MOTOR::stop() {
 /////////////////////////////////
 
 
-MOTOR_CONTROL::MOTOR_CONTROL(MOTOR inputLeftMotor, MOTOR inputRightMotor, int inputSpeedBalance) {
+MOTOR_CONTROL::MOTOR_CONTROL(MOTOR& inputLeftMotor, MOTOR& inputRightMotor, int inputSpeedBalance) {
     speedBalance = inputSpeedBalance;
     leftMotor = inputLeftMotor;
     rightMotor = inputRightMotor;
@@ -63,14 +61,15 @@ int MOTOR_CONTROL::contextializeSpeed(int speed) {
     if(speed < 0) speed = 0;
 
     // bound speed to the max and min speed
-    speed = (((float)speed / 100.0) * (ANALOG_MAX - ANALOG_MIN)) + ANALOG_MIN;
+    int speedRatio = (int)(speed / ANALOG_MAX - ANALOG_MIN);
+    speed = speedRatio * 100 + ANALOG_MIN;
 
     return speed;
 }
 
 void MOTOR_CONTROL::turnLeft(int turnspeed, int speed) {
     int contextspeed = contextializeSpeed(speed);
-
+    
     if (speed == 0) {
         leftMotor.stop();
     } else {
@@ -81,7 +80,7 @@ void MOTOR_CONTROL::turnLeft(int turnspeed, int speed) {
 
 void MOTOR_CONTROL::turnRight(int turnspeed, int speed) {
     int contextspeed = contextializeSpeed(speed);
-
+    
     if (speed == 0) {
         leftMotor.stop();
     } else {
@@ -97,14 +96,12 @@ void MOTOR_CONTROL::stop() {
 
 void MOTOR_CONTROL::swivelLeft(int speed) {
     speed = contextializeSpeed(speed);
-    // Serial.println(speed);
     leftMotor.setSpeed(speed, false);
     rightMotor.setSpeed(speed, true);
 }
 
 void MOTOR_CONTROL::swivelRight(int speed) {
     speed = contextializeSpeed(speed);
-    // Serial.println(speed);
     leftMotor.setSpeed(speed, true);
     rightMotor.setSpeed(speed, false);
 }

@@ -1,5 +1,6 @@
 {
     "configuration": "cpu=atmega2560",
     "board": "arduino:avr:mega",
-    "sketch": "sketches/main/main.ino"
+    "sketch": "sketches/main/main.ino",
+    "port": "/dev/ttyACM0"
 }

@@ -1,5 +1,6 @@
 #include <NewPing.h>
-#include <MOTOR.h>
+#include "MOTOR.h"
+
 #define MAX_DISTANCE 300
 
 NewPing backsonar(29, 28, MAX_DISTANCE);
@@ -29,6 +30,9 @@ int ccwRightSpeed = 100;
 
 float history[4] = {0, 0, 0, 0};
 
+// MOTOR lMotor(LIN1, LIN2, LEnable);
+// MOTOR rMotor(RIN1, RIN2, REnable);
+// MOTOR_CONTROL motorControl(lMotor, rMotor, 30);
 
 /*
  . start by turning into the wall, ccw for left wall
@@ -58,8 +62,8 @@ void setup() {
   /*Left Motor Pin Setup*/  pinMode(LIN1, OUTPUT); pinMode(LIN2, OUTPUT); pinMode(LEnable, OUTPUT);
   /*Right Motor Pin Setup*/ pinMode(RIN1, OUTPUT); pinMode(RIN2, OUTPUT); pinMode(REnable, OUTPUT);
 
-  digitalWrite(LIN1, HIGH);
-  digitalWrite(LIN2, LOW);
+  // digitalWrite(LIN1, HIGH);
+  // digitalWrite(LIN2, LOW);
   analogWrite(LEnable, 250);
   delay(20);
   analogWrite(LEnable, 50);
@@ -70,53 +74,51 @@ void setup() {
   delay(20);
   analogWrite(REnable, 50);
 
-  // start by turning into the wall and setting currentDirection
+  //start by turning into the wall and setting currentDirection
   rMotor(ccwLeftSpeed, true);
   lMotor(ccwRightSpeed, true);
   currentDirection = 0;
-
-  MOTOR lMotor = new MOTOR(LIN1, LIN2, LEnable);
-  MOTOR rMOTOR = new MOTOR(RIN1, RIN2, REnable);
-  MOTOR_CONTROL motorControl = new MOTOR_CONTROL(lMotor, rMotor, 30);
 }
 
-// void rMotor(int speed, bool fwd) {
-//   if (RcurrentMotorSpeed == 0) speed = motorStart;
-//   if (speed > analogMax) speed = analogMax;
-//   else if(speed < 50) speed = analogMin;
+void rMotor(int speed, bool fwd) {
+  if (RcurrentMotorSpeed == 0) speed = motorStart;
+  if (speed > analogMax) speed = analogMax;
+  else if(speed < 50) speed = analogMin;
 
-//   if (fwd) {
-//     digitalWrite(RIN1, HIGH);
-//     digitalWrite(RIN2, LOW);
-//   } else {
-//     digitalWrite(RIN1, LOW);
-//     digitalWrite(RIN2, HIGH);
-//   }
+  if (fwd) {
+    digitalWrite(RIN1, HIGH);
+    digitalWrite(RIN2, LOW);
+  } else {
+    digitalWrite(RIN1, LOW);
+    digitalWrite(RIN2, HIGH);
+  }
 
-//   RcurrentMotorSpeed = speed;
-//   analogWrite(REnable, speed);
-// }
+  RcurrentMotorSpeed = speed;
+  analogWrite(REnable, speed);
+}
 
-// void lMotor(int speed, bool fwd) {
-//   if (LcurrentMotorSpeed == 0) speed = motorStart;
-//   if (speed < analogMax) speed = 250;
-//   else if(speed < 50) speed = analogMin;
+void lMotor(int speed, bool fwd) {
+  if (LcurrentMotorSpeed == 0) speed = motorStart;
+  if (speed < analogMax) speed = 250;
+  else if(speed < 50) speed = analogMin;
 
 
-//   if (fwd) {
-//     digitalWrite(LIN1, HIGH);
-//     digitalWrite(LIN2, LOW);
-//   } else {
-//     digitalWrite(LIN1, LOW);
-//     digitalWrite(LIN2, HIGH);
-//   }
+  if (fwd) {
+    digitalWrite(LIN1, HIGH);
+    digitalWrite(LIN2, LOW);
+  } else {
+    digitalWrite(LIN1, LOW);
+    digitalWrite(LIN2, HIGH);
+  }
 
-//   LcurrentMotorSpeed = speed;
-//   analogWrite(LEnable, speed);
-// }
+  LcurrentMotorSpeed = speed;
+  analogWrite(LEnable, speed);
+}
 
 void loop() {
-  delay(100);
+   delay(100);
+
+  //motorControl.turnRight(30, 100);
   // Varible Assignment //
   //* float backdist = backsonar.convert_cm(backsonar.ping_median(5)); // this is not required for this method we only need front
   float frontdist = frontsonar.convert_cm(frontsonar.ping_median(5));
@@ -150,14 +152,14 @@ void loop() {
   if ((history[0] > history[2]) && (history[1] > history[3])) {
     if(currentDirection) {
       //turn ccw and set dir
-      // rMotor(ccwLeftSpeed, true); lMotor(ccwRightSpeed, true);
-      // currentDirection = 0;
-      motorControl.turnLeft(30, 100);
+      rMotor(ccwLeftSpeed, true); lMotor(ccwRightSpeed, true);
+      currentDirection = 0;
+      //motorControl.turnLeft(30, 100);
     } else {
       //turn cw and set dir
-      // rMotor(cwLeftSpeed, true); lMotor(cwRightSpeed, true);
-      // currentDirection = 1;
-      motorControl.turnRight(30, 100);
+      rMotor(cwLeftSpeed, true); lMotor(cwRightSpeed, true);
+      currentDirection = 1;
+      //motorControl.turnRight(30, 100);
     }
   }
 }
