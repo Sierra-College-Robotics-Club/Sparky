@@ -23,9 +23,9 @@ class MOTOR {
 private:
     int dirPin1, dirPin2;
     int enablePin;
-    int currentSpeed = 0;
 
 public:
+    int currentSpeed = 0;
     MOTOR() = default;
     MOTOR(int inputDirPin1, int inputDirPin2, int inputEnablePin);
     void setSpeed(int speed, bool direction);
@@ -37,11 +37,12 @@ private:
     MOTOR leftMotor;   // Use a reference to MOTOR objects
     MOTOR rightMotor;
     int speedBalance;
-
     int contextializeSpeed(int speed);
 
 public:
     MOTOR_CONTROL(MOTOR inputLeftMotor, MOTOR inputRightMotor, int inputSpeedBalance = 0);
+    bool isTurningLeft();
+    bool isTurningRight();
     void turnLeft(int turnspeed, int speed = 255);
     void turnRight(int turnspeed, int speed = 255);
     void stop();

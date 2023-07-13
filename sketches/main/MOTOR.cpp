@@ -48,7 +48,7 @@ void MOTOR::stop() {
 }
 
 /////////////////////////////////
-//////////MOTOR CONTROL///////O//
+//////////MOTOR CONTROL//////////
 /////////////////////////////////
 
 
@@ -58,13 +58,26 @@ MOTOR_CONTROL::MOTOR_CONTROL(MOTOR inputLeftMotor, MOTOR inputRightMotor, int in
     rightMotor = inputRightMotor;
 }
 
+bool MOTOR_CONTROL::isTurningLeft() {
+    if (leftMotor.currentSpeed > rightMotor.currentSpeed) {
+      return true;
+    }
+    return false;
+}
+
+bool MOTOR_CONTROL::isTurningRight() {
+    if (leftMotor.currentSpeed > rightMotor.currentSpeed) {
+      return false;
+    }
+    return true;
+}
+
 int MOTOR_CONTROL::contextializeSpeed(int speed) {
     if(speed > 100) speed = 100;
     if(speed < 0) speed = 0;
 
     // bound speed to the max and min speed
     speed = (((float)speed / 100.0) * (ANALOG_MAX - ANALOG_MIN)) + ANALOG_MIN;
-
     return speed;
 }
 
